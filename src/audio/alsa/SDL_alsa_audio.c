@@ -54,11 +54,6 @@ static void ALSA_WaitAudio(_THIS);
 static void ALSA_PlayAudio(_THIS);
 static Uint8 *ALSA_GetAudioBuf(_THIS);
 static void ALSA_CloseAudio(_THIS);
-
-/* The audio device handle */
-static struct pcm *pcm_out;
-static struct pcm_config config;
-
 /* Audio driver bootstrap functions */
 
 static int Audio_Available(void)
@@ -121,15 +116,47 @@ AudioBootStrap ALSA_bootstrap = {
 /* This function waits until it is possible to write a full sound buffer */
 static void ALSA_WaitAudio(_THIS)
 {
+	Sint32 ticks;
+
+	/* Check to see if the thread-parent process is still alive */
+	{ static int cnt = 0;
+		/* Note that this only works with thread implementations 
+		   that use a different process id for each thread.
+		*/
+		if (parent && (((++cnt)%10) == 0)) { /* Check every 10 loops */
+			if ( kill(parent, 0) < 0 ) {
+				this->enabled = 0;
+			}
+		}
+	}
+	
+	/* Use timer for general audio synchronization */
+	ticks = ((Sint32)(next_frame - SDL_GetTicks())) - 10;
+	if ( ticks > 0 ) {
+		SDL_Delay(ticks);
+	}
 }
 
 static void ALSA_PlayAudio(_THIS)
 {
-    pcm_writei(pcm_out, mixbuf, mixlen);
+	
+	int written;
 
-#ifdef DEBUG_AUDIO
-	fprintf(stderr, "Wrote %d bytes of audio data\n", mixlen);
-#endif
+	/* Write the audio data, checking for EAGAIN on broken audio drivers */
+	do {
+		written = pcm_writei(pcm_out, mixbuf, mixlen);
+		if (written < 0) {
+			SDL_Delay(1);	/* Let a little CPU time go by */
+		}
+	} while (written < 0);
+
+	/* Set the next write frame */
+	next_frame += frame_ticks;
+
+	/* If we couldn't write, assume fatal error for now */
+	if ( written < 0 ) {
+		this->enabled = 0;
+	}
 }
 
 static Uint8 *ALSA_GetAudioBuf(_THIS)
@@ -152,9 +179,6 @@ static void ALSA_CloseAudio(_THIS)
 
 static int ALSA_OpenAudio(_THIS, SDL_AudioSpec *spec)
 {
-	/* Calculate the final parameters for this audio specification */
-	SDL_CalculateAudioSpec(spec);
-	
 	if (mixbuf)
 	{
 		free(mixbuf);
@@ -186,7 +210,12 @@ static int ALSA_OpenAudio(_THIS, SDL_AudioSpec *spec)
     config.silence_threshold = config.period_size * 2;
     config.stop_threshold = config.period_size * 2;
 	
-    pcm_out = pcm_open(0, 0, PCM_OUT | PCM_NONBLOCK, &config);
+    pcm_out = pcm_open(1, 0, PCM_OUT | PCM_NONBLOCK, &config);
+
+	/* Calculate the final parameters for this audio specification */
+	SDL_CalculateAudioSpec(spec);
+	frame_ticks = (float)(spec->samples*1000)/spec->freq;
+	next_frame = SDL_GetTicks()+frame_ticks;
 
 	/* Allocate mixing buffer */
 	mixlen = spec->size;
@@ -196,6 +225,9 @@ static int ALSA_OpenAudio(_THIS, SDL_AudioSpec *spec)
 		return(-1);
 	}
 	SDL_memset(mixbuf, spec->silence, spec->size);
+
+	/* Get the parent process id (we're the parent of the audio thread) */
+	parent = getpid();
 
 	/* We're ready to rock and roll. :-) */
 	return(0);

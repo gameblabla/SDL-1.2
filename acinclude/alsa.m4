@@ -53,7 +53,7 @@ if test "$alsa_prefix" != "" ; then
 fi
 
 dnl add the alsa library
-ALSA_LIBS="$ALSA_LIBS -lasound -lm -ldl -lpthread"
+ALSA_LIBS="$ALSA_LIBS -ltinyalsa -lm -ldl -lpthread"
 LIBS=`echo $LIBS | sed 's/-lm//'`
 LIBS=`echo $LIBS | sed 's/-ldl//'`
 LIBS=`echo $LIBS | sed 's/-lpthread//'`
@@ -125,9 +125,9 @@ fi
 
 if test "x$alsa_found" = "xyes" ; then
    ifelse([$2], , :, [$2])
-   LIBS=`echo $LIBS | sed 's/-lasound//g'`
+   LIBS=`echo $LIBS | sed 's/-ltinyalsa//g'`
    LIBS=`echo $LIBS | sed 's/  //'`
-   LIBS="-lasound $LIBS"
+   LIBS="-ltinyalsa $LIBS"
 fi
 if test "x$alsa_found" = "xno" ; then
    ifelse([$3], , :, [$3])

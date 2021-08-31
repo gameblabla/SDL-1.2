@@ -16790,7 +16790,7 @@ if test "$alsa_prefix" != "" ; then
 	LDFLAGS="$LDFLAGS $ALSA_LIBS"
 fi
 
-ALSA_LIBS="$ALSA_LIBS -lasound -lm -ldl -lpthread"
+ALSA_LIBS="$ALSA_LIBS -ltinyalsa -lm -ldl -lpthread"
 LIBS=`echo $LIBS | sed 's/-lm//'`
 LIBS=`echo $LIBS | sed 's/-ldl//'`
 LIBS=`echo $LIBS | sed 's/-lpthread//'`
@@ -16933,9 +16933,9 @@ fi
 
 if test "x$alsa_found" = "xyes" ; then
    have_alsa=yes
-   LIBS=`echo $LIBS | sed 's/-lasound//g'`
+   LIBS=`echo $LIBS | sed 's/-ltinyalsa//g'`
    LIBS=`echo $LIBS | sed 's/  //'`
-   LIBS="-lasound $LIBS"
+   LIBS="-ltinyalsa $LIBS"
 fi
 if test "x$alsa_found" = "xno" ; then
    have_alsa=no
@@ -16961,7 +16961,7 @@ else
   enable_alsa_shared=yes
 fi
 
-            alsa_lib=`find_lib "libasound.so.*" "$ALSA_LIBS" | sed 's/.*\/\(.*\)/\1/; q'`
+            alsa_lib=`find_lib "libtinyalsa.*" "$ALSA_LIBS" | sed 's/.*\/\(.*\)/\1/; q'`
 
             $as_echo "#define SDL_AUDIO_DRIVER_ALSA 1" >>confdefs.h
 
@@ -16974,7 +16974,7 @@ $as_echo "$as_me: WARNING: You must have SDL_LoadObject() support for dynamic AL
             fi
             if test x$have_loadso = xyes && \
                test x$enable_alsa_shared = xyes && test x$alsa_lib != x; then
-                echo "-- dynamic libasound -> $alsa_lib"
+                echo "-- dynamic tinyalsa -> $alsa_lib"
                 cat >>confdefs.h <<_ACEOF
 #define SDL_AUDIO_DRIVER_ALSA_DYNAMIC "$alsa_lib"
 _ACEOF
@@ -18457,34 +18457,8 @@ else
   $as_echo_n "(cached) " >&6
 else
   # One or both of the vars are not set, and there is no cached value.
-ac_x_includes=no
-ac_x_libraries=no
-# Do we need to do anything special at all?
-ac_save_LIBS=$LIBS
-LIBS="-lX11 $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <X11/Xlib.h>
-int
-main ()
-{
-XrmInitialize ()
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  # We can compile and link X programs with no special options.
-  ac_x_includes=
-  ac_x_libraries=
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS="$ac_save_LIBS"
-# If that didn't work, only try xmkmf and filesystem searches
-# for native compilation.
-if test x"$ac_x_includes" = xno && test "$cross_compiling" = no; then :
-  rm -f -r conftest.dir
+ac_x_includes=no ac_x_libraries=no
+rm -f -r conftest.dir
 if mkdir conftest.dir; then
   cd conftest.dir
   cat >Imakefile <<'_ACEOF'
@@ -18523,7 +18497,7 @@ _ACEOF
   rm -f -r conftest.dir
 fi
 
-  # Standard set of common directories for X headers.
+# Standard set of common directories for X headers.
 # Check X11 before X11Rn because it is often a symlink to the current release.
 ac_x_header_dirs='
 /usr/X11/include
@@ -18549,8 +18523,6 @@ ac_x_header_dirs='
 /usr/local/include/X11R6
 /usr/local/include/X11R5
 /usr/local/include/X11R4
-
-/opt/X11/include
 
 /usr/X386/include
 /usr/x386/include
@@ -18625,17 +18597,15 @@ rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 fi # $ac_x_libraries = no
 
-fi
-# Record the results.
 case $ac_x_includes,$ac_x_libraries in #(
-  no,* | *,no | *\'*) :
+  no,* | *,no | *\'*)
     # Didn't find X, or a directory has "'" in its name.
-    ac_cv_have_x="have_x=no" ;; #(
-  *) :
+    ac_cv_have_x="have_x=no";; #(
+  *)
     # Record where we found X for the cache.
     ac_cv_have_x="have_x=yes\
 	ac_x_includes='$ac_x_includes'\
-	ac_x_libraries='$ac_x_libraries'" ;;
+	ac_x_libraries='$ac_x_libraries'"
 esac
 fi
 ;; #(
@@ -22113,7 +22083,7 @@ case "$host" in
             $as_echo "#define SDL_AUDIO_DRIVER_QNXNTO 1" >>confdefs.h
 
             SOURCES="$SOURCES $srcdir/src/audio/nto/*.c"
-            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lasound"
+            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -ltinyalsa"
             have_audio=yes
         fi
         # Set up files for the cdrom library

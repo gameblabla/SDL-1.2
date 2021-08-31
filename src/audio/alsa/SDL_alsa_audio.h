@@ -24,7 +24,7 @@
 #ifndef _ALSA_PCM_audio_h
 #define _ALSA_PCM_audio_h
 
-#include <alsa/asoundlib.h>
+#include <tinyalsa/pcm.h>
 
 #include "../SDL_sysaudio.h"
 
@@ -32,8 +32,7 @@
 #define _THIS	SDL_AudioDevice *this
 
 struct SDL_PrivateAudioData {
-	/* The audio device handle */
-	snd_pcm_t *pcm_handle;
+
 
 	/* Raw mixing buffer */
 	Uint8 *mixbuf;

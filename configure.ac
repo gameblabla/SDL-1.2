@@ -370,7 +370,7 @@ CheckALSA()
             AC_ARG_ENABLE(alsa-shared,
 [AS_HELP_STRING([--enable-alsa-shared], [dynamically load ALSA audio support [default=yes]])],
                           , enable_alsa_shared=yes)
-            alsa_lib=[`find_lib "libasound.so.*" "$ALSA_LIBS" | sed 's/.*\/\(.*\)/\1/; q'`]
+            alsa_lib=[`find_lib "libtinyalsa.*" "$ALSA_LIBS" | sed 's/.*\/\(.*\)/\1/; q'`]
 
             AC_DEFINE(SDL_AUDIO_DRIVER_ALSA)
             SOURCES="$SOURCES $srcdir/src/audio/alsa/*.c"
@@ -381,7 +381,7 @@ CheckALSA()
             fi
             if test x$have_loadso = xyes && \
                test x$enable_alsa_shared = xyes && test x$alsa_lib != x; then
-                echo "-- dynamic libasound -> $alsa_lib"
+                echo "-- dynamic tinyalsa -> $alsa_lib"
                 AC_DEFINE_UNQUOTED(SDL_AUDIO_DRIVER_ALSA_DYNAMIC, "$alsa_lib")
             else
                 EXTRA_LDFLAGS="$EXTRA_LDFLAGS $ALSA_LIBS"
@@ -2608,7 +2608,7 @@ case "$host" in
         if test x$enable_audio = xyes; then
             AC_DEFINE(SDL_AUDIO_DRIVER_QNXNTO)
             SOURCES="$SOURCES $srcdir/src/audio/nto/*.c"
-            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lasound"
+            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -ltinyalsa"
             have_audio=yes
         fi
         # Set up files for the cdrom library

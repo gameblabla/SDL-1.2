@@ -24,7 +24,7 @@
 #ifndef _ALSA_PCM_audio_h
 #define _ALSA_PCM_audio_h
 
-#include <alsa/asoundlib.h>
+#include <tinyalsa/pcm.h>
 
 #include "../SDL_sysaudio.h"
 
@@ -32,17 +32,29 @@
 #define _THIS	SDL_AudioDevice *this
 
 struct SDL_PrivateAudioData {
-	/* The audio device handle */
-	snd_pcm_t *pcm_handle;
+	/* The parent process id, to detect when application quits */
+	pid_t parent;
+	
+	struct pcm *pcm_out;
+	struct pcm_config config;
 
 	/* Raw mixing buffer */
 	Uint8 *mixbuf;
 	int    mixlen;
+
+	/* Support for audio timing using a timer */
+	float frame_ticks;
+	float next_frame;
 };
 
 /* Old variable names */
+#define parent			(this->hidden->parent)
 #define pcm_handle		(this->hidden->pcm_handle)
 #define mixbuf			(this->hidden->mixbuf)
 #define mixlen			(this->hidden->mixlen)
+#define frame_ticks		(this->hidden->frame_ticks)
+#define next_frame		(this->hidden->next_frame)
+#define pcm_out		(this->hidden->pcm_out)
+#define config		(this->hidden->config)
 
 #endif /* _ALSA_PCM_audio_h */

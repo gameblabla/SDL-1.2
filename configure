@@ -16790,7 +16790,7 @@ if test "$alsa_prefix" != "" ; then
 	LDFLAGS="$LDFLAGS $ALSA_LIBS"
 fi
 
-ALSA_LIBS="$ALSA_LIBS -lasound -lm -ldl -lpthread"
+ALSA_LIBS="$ALSA_LIBS -ltinyalsa -lm -ldl -lpthread"
 LIBS=`echo $LIBS | sed 's/-lm//'`
 LIBS=`echo $LIBS | sed 's/-ldl//'`
 LIBS=`echo $LIBS | sed 's/-lpthread//'`
@@ -16799,143 +16799,11 @@ LIBS="$ALSA_LIBS $LIBS"
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ALSA_LIBS" >&5
 $as_echo "$ALSA_LIBS" >&6; }
 
-min_alsa_version=0.9.0
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libasound headers version >= $min_alsa_version" >&5
-$as_echo_n "checking for libasound headers version >= $min_alsa_version... " >&6; }
-no_alsa=""
-    alsa_min_major_version=`echo $min_alsa_version | \
-           sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\)/\1/'`
-    alsa_min_minor_version=`echo $min_alsa_version | \
-           sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\)/\2/'`
-    alsa_min_micro_version=`echo $min_alsa_version | \
-           sed 's/\([0-9]*\).\([0-9]*\).\([0-9]*\)/\3/'`
-
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-#include <alsa/asoundlib.h>
-
-int
-main ()
-{
-
-/* ensure backward compatibility */
-#if !defined(SND_LIB_MAJOR) && defined(SOUNDLIB_VERSION_MAJOR)
-#define SND_LIB_MAJOR SOUNDLIB_VERSION_MAJOR
-#endif
-#if !defined(SND_LIB_MINOR) && defined(SOUNDLIB_VERSION_MINOR)
-#define SND_LIB_MINOR SOUNDLIB_VERSION_MINOR
-#endif
-#if !defined(SND_LIB_SUBMINOR) && defined(SOUNDLIB_VERSION_SUBMINOR)
-#define SND_LIB_SUBMINOR SOUNDLIB_VERSION_SUBMINOR
-#endif
-
-#  if(SND_LIB_MAJOR > $alsa_min_major_version)
-  exit(0);
-#  else
-#    if(SND_LIB_MAJOR < $alsa_min_major_version)
-#       error not present
-#    endif
-
-#   if(SND_LIB_MINOR > $alsa_min_minor_version)
-  exit(0);
-#   else
-#     if(SND_LIB_MINOR < $alsa_min_minor_version)
-#          error not present
-#      endif
-
-#      if(SND_LIB_SUBMINOR < $alsa_min_micro_version)
-#        error not present
-#      endif
-#    endif
-#  endif
-exit(0);
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: found." >&5
-$as_echo "found." >&6; }
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: not present." >&5
-$as_echo "not present." >&6; }
-
-   alsa_found=no
-
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-ac_ext=c
-ac_cpp='$CPP $CPPFLAGS'
-ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
-ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
-ac_compiler_gnu=$ac_cv_c_compiler_gnu
-
-
-if test "x$enable_alsatest" = "xyes"; then
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for snd_ctl_open in -lasound" >&5
-$as_echo_n "checking for snd_ctl_open in -lasound... " >&6; }
-if ${ac_cv_lib_asound_snd_ctl_open+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lasound  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char snd_ctl_open ();
-int
-main ()
-{
-return snd_ctl_open ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_asound_snd_ctl_open=yes
-else
-  ac_cv_lib_asound_snd_ctl_open=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_asound_snd_ctl_open" >&5
-$as_echo "$ac_cv_lib_asound_snd_ctl_open" >&6; }
-if test "x$ac_cv_lib_asound_snd_ctl_open" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBASOUND 1
-_ACEOF
-
-  LIBS="-lasound $LIBS"
-
-else
-
-	 alsa_found=no
-
-fi
-
-fi
-
 if test "x$alsa_found" = "xyes" ; then
    have_alsa=yes
-   LIBS=`echo $LIBS | sed 's/-lasound//g'`
+   LIBS=`echo $LIBS | sed 's/-ltinyalsa//g'`
    LIBS=`echo $LIBS | sed 's/  //'`
-   LIBS="-lasound $LIBS"
+   LIBS="-ltinyalsa $LIBS"
 fi
 if test "x$alsa_found" = "xno" ; then
    have_alsa=no
@@ -16961,7 +16829,7 @@ else
   enable_alsa_shared=yes
 fi
 
-            alsa_lib=`find_lib "libasound.so.*" "$ALSA_LIBS" | sed 's/.*\/\(.*\)/\1/; q'`
+            alsa_lib=`find_lib "libtinyalsa.*" "$ALSA_LIBS" | sed 's/.*\/\(.*\)/\1/; q'`
 
             $as_echo "#define SDL_AUDIO_DRIVER_ALSA 1" >>confdefs.h
 
@@ -16974,7 +16842,7 @@ $as_echo "$as_me: WARNING: You must have SDL_LoadObject() support for dynamic AL
             fi
             if test x$have_loadso = xyes && \
                test x$enable_alsa_shared = xyes && test x$alsa_lib != x; then
-                echo "-- dynamic libasound -> $alsa_lib"
+                echo "-- dynamic tinyalsa -> $alsa_lib"
                 cat >>confdefs.h <<_ACEOF
 #define SDL_AUDIO_DRIVER_ALSA_DYNAMIC "$alsa_lib"
 _ACEOF
@@ -18457,34 +18325,8 @@ else
   $as_echo_n "(cached) " >&6
 else
   # One or both of the vars are not set, and there is no cached value.
-ac_x_includes=no
-ac_x_libraries=no
-# Do we need to do anything special at all?
-ac_save_LIBS=$LIBS
-LIBS="-lX11 $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <X11/Xlib.h>
-int
-main ()
-{
-XrmInitialize ()
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  # We can compile and link X programs with no special options.
-  ac_x_includes=
-  ac_x_libraries=
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS="$ac_save_LIBS"
-# If that didn't work, only try xmkmf and filesystem searches
-# for native compilation.
-if test x"$ac_x_includes" = xno && test "$cross_compiling" = no; then :
-  rm -f -r conftest.dir
+ac_x_includes=no ac_x_libraries=no
+rm -f -r conftest.dir
 if mkdir conftest.dir; then
   cd conftest.dir
   cat >Imakefile <<'_ACEOF'
@@ -18523,7 +18365,7 @@ _ACEOF
   rm -f -r conftest.dir
 fi
 
-  # Standard set of common directories for X headers.
+# Standard set of common directories for X headers.
 # Check X11 before X11Rn because it is often a symlink to the current release.
 ac_x_header_dirs='
 /usr/X11/include
@@ -18549,8 +18391,6 @@ ac_x_header_dirs='
 /usr/local/include/X11R6
 /usr/local/include/X11R5
 /usr/local/include/X11R4
-
-/opt/X11/include
 
 /usr/X386/include
 /usr/x386/include
@@ -18625,17 +18465,15 @@ rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 fi # $ac_x_libraries = no
 
-fi
-# Record the results.
 case $ac_x_includes,$ac_x_libraries in #(
-  no,* | *,no | *\'*) :
+  no,* | *,no | *\'*)
     # Didn't find X, or a directory has "'" in its name.
-    ac_cv_have_x="have_x=no" ;; #(
-  *) :
+    ac_cv_have_x="have_x=no";; #(
+  *)
     # Record where we found X for the cache.
     ac_cv_have_x="have_x=yes\
 	ac_x_includes='$ac_x_includes'\
-	ac_x_libraries='$ac_x_libraries'" ;;
+	ac_x_libraries='$ac_x_libraries'"
 esac
 fi
 ;; #(
@@ -22113,7 +21951,7 @@ case "$host" in
             $as_echo "#define SDL_AUDIO_DRIVER_QNXNTO 1" >>confdefs.h
 
             SOURCES="$SOURCES $srcdir/src/audio/nto/*.c"
-            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -lasound"
+            EXTRA_LDFLAGS="$EXTRA_LDFLAGS -ltinyalsa"
             have_audio=yes
         fi
         # Set up files for the cdrom library

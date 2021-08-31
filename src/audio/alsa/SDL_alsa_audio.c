@@ -52,6 +52,16 @@
 #define SDL_NAME(X)	X
 #endif
 
+#define CARD_DEFAULT 0
+
+//#define BLOCK_AUDIO 1
+
+#ifdef BLOCK_AUDIO
+#define FLAGS_ALSA (PCM_OUT | PCM_MMAP)
+#else
+#define FLAGS_ALSA (PCM_OUT | PCM_MMAP | PCM_NONBLOCK)
+#endif
+
 /* The tag name used by DSP audio */
 #define ALSA_DRIVER_NAME         "alsa"
 
@@ -73,14 +83,16 @@ static struct pcm * (*SDL_NAME(pcm_open))(unsigned int card,
                      unsigned int device,
                      unsigned int flags,
                      const struct pcm_config *c);
-static int (*SDL_NAME(pcm_close))(struct pcm *pcm);
-static int (*SDL_NAME(pcm_writei))( struct pcm *pcm, const void *data, unsigned int frame_count);
+static int (*SDL_NAME(pcm_is_ready))(const struct pcm *pcm);
+static int (*SDL_NAME(pcm_close)) (struct pcm *pcm);
+static int (*SDL_NAME(pcm_writei))(struct pcm *pcm, const void *data, unsigned int frame_count);
 static struct {
 	const char *name;
 	void **func;
 } alsa_functions[] = {
 	{ "pcm_open",	(void **)&SDL_NAME(pcm_open)	},
-	{ "pcm_close",	(void **)&SDL_NAME(pcm_close)		},
+	{ "pcm_is_ready",	(void **)&SDL_NAME(pcm_is_ready)	},
+	{ "pcm_close",	(void **)&SDL_NAME(pcm_close)	},
 	{ "pcm_writei",	(void **)&SDL_NAME(pcm_writei)	},
 };
 
@@ -146,15 +158,13 @@ static int Audio_Available(void)
 
 	available = 0;
 	if ( LoadALSALibrary() < 0 ) {
-		printf("Can't load Shared library\n");
 		return available;
 	}
-	pcm_out_av = SDL_NAME(pcm_open)(0, 0, PCM_OUT, &config_av);
+	pcm_out_av = SDL_NAME(pcm_open)(CARD_DEFAULT, 0, FLAGS_ALSA, &config_av);
 	if (pcm_out_av) {
 		available = 1;
 		SDL_NAME(pcm_close)(pcm_out_av);
 	}
-	printf("Unload Shared library\n");
 	UnloadALSALibrary();
 	return(available);
 }
@@ -219,29 +229,38 @@ static void ALSA_WaitAudio(_THIS)
 		}
 	}
 	
+	#ifndef BLOCK_AUDIO
 	/* Use timer for general audio synchronization */
 	ticks = ((Sint32)(next_frame - SDL_GetTicks())) - 10;
 	if ( ticks > 0 ) {
 		SDL_Delay(ticks);
 	}
+	#endif
 }
 
 static void ALSA_PlayAudio(_THIS)
 {
 	
 	int written;
+	
+	unsigned int frame_count = pcm_bytes_to_frames(pcm_out, mixlen);
 
 	/* Write the audio data, checking for EAGAIN on broken audio drivers */
+	#ifndef BLOCK_AUDIO
 	do {
-		written = SDL_NAME(pcm_writei)(pcm_out, mixbuf, mixlen);
+	#endif
+		written = SDL_NAME(pcm_writei)(pcm_out, mixbuf, frame_count);
+	#ifndef BLOCK_AUDIO
 		if (written < 0) {
 			SDL_Delay(1);	/* Let a little CPU time go by */
 		}
 	} while (written < 0);
+	#endif
 
+	#ifndef BLOCK_AUDIO
 	/* Set the next write frame */
 	next_frame += frame_ticks;
-
+	#endif
 	/* If we couldn't write, assume fatal error for now */
 	if ( written < 0 ) {
 		this->enabled = 0;
@@ -293,22 +312,26 @@ static int ALSA_OpenAudio(_THIS, SDL_AudioSpec *spec)
 	
 	config.channels = spec->channels;
 	config.rate = spec->freq;
-    config.period_size = (spec->samples / 2);
+    config.period_size = (spec->samples);
     config.period_count = 2;
     config.start_threshold = config.period_size;
     config.silence_threshold = config.period_size * 2;
     config.stop_threshold = config.period_size * 2;
 	
-    pcm_out = SDL_NAME(pcm_open)(0, 0, PCM_OUT | PCM_NONBLOCK, &config);
+    pcm_out = SDL_NAME(pcm_open)(CARD_DEFAULT, 0, FLAGS_ALSA, &config);
 	if ( pcm_out < 0 ) {
 		SDL_SetError("Couldn't open TinyALSA card");
 		return(-1);
 	}
 	
+	SDL_NAME(pcm_is_ready)(pcm_out);
+	
 	/* Calculate the final parameters for this audio specification */
 	SDL_CalculateAudioSpec(spec);
+	#ifndef BLOCK_AUDIO
 	frame_ticks = (float)(spec->samples*1000)/spec->freq;
 	next_frame = SDL_GetTicks()+frame_ticks;
+	#endif
 
 	/* Allocate mixing buffer */
 	mixlen = spec->size;

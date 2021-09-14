@@ -57,9 +57,9 @@
 //#define BLOCK_AUDIO 1
 
 #ifdef BLOCK_AUDIO
-#define FLAGS_ALSA (PCM_OUT | PCM_MMAP)
+#define FLAGS_ALSA (PCM_OUT)
 #else
-#define FLAGS_ALSA (PCM_OUT | PCM_MMAP | PCM_NONBLOCK)
+#define FLAGS_ALSA (PCM_OUT | PCM_NONBLOCK)
 #endif
 
 /* The tag name used by DSP audio */

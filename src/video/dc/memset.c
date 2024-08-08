@@ -5,7 +5,7 @@
 
 // Set 1 byte at a time
 
-void * memset_ (void *dest, const uint8_t val, size_t len)
+void * memset_ (void *dest, const int val, size_t len)
 {
   if(!len)
   {

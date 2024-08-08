@@ -255,15 +255,19 @@ extern DECLSPEC void SDLCALL SDL_qsort(void *base, size_t nmemb, size_t size,
 #define SDL_tolower(X)  (((X) >= 'A') && ((X) <= 'Z') ? ('a'+((X)-'A')) : (X))
 #endif
 
+
 #ifdef HAVE_MEMSET
 #define SDL_memset      memset
 #else
 extern DECLSPEC void * SDLCALL SDL_memset(void *dst, int c, size_t len);
 #endif
 
+
+extern void * memset_(void *dst, const int c, size_t len);
+
 #if defined(__DREAMCAST__)
 #undef SDL_memset
-#define SDL_memset      memset_
+#define SDL_memset memset_
 #endif
 #if defined(__GNUC__) && defined(__i386__)
 #define SDL_memset4(dst, val, len)				\
@@ -332,6 +336,9 @@ extern DECLSPEC void * SDLCALL SDL_memcpy(void *dst, const void *src, size_t len
 #endif
 #endif
 
+
+extern void * memcpy_(void *dst, const void *src, size_t len);
+
 #if defined(__DREAMCAST__)
 #undef SDL_memcpy
 #define SDL_memcpy      memcpy_
@@ -392,6 +399,8 @@ do {							\
 extern DECLSPEC void * SDLCALL SDL_revcpy(void *dst, const void *src, size_t len);
 #endif
 
+extern void * memmove_ (void *dest, const void *src, size_t len);
+
 #ifdef HAVE_MEMMOVE
 #define SDL_memmove     memmove
 #elif defined(HAVE_BCOPY)
@@ -417,6 +426,8 @@ do {							\
 #else
 extern DECLSPEC int SDLCALL SDL_memcmp(const void *s1, const void *s2, size_t len);
 #endif
+
+extern int memcmp_(const void *s1, const void *s2, size_t len);
 
 #if defined(__DREAMCAST__)
 #undef SDL_memcmp

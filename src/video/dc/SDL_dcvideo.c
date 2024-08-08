@@ -199,6 +199,7 @@ int DC_VideoInit(_THIS, SDL_PixelFormat *vformat)
 
 const static SDL_Rect
 	// RECT_800x600 = {0,0,800,600},
+	RECT_960x960 = {0,0,960,960},
 	RECT_768x576 = {0,0,768,576},
 	RECT_768x480 = {0,0,768,480},
 	RECT_640x480 = {0,0,640,480},
@@ -207,6 +208,7 @@ const static SDL_Rect
 
 const static SDL_Rect *vid_modes[] = {
 	// &RECT_800x600,
+	&RECT_960x960,
 	&RECT_768x576,
 	&RECT_768x480,
 	&RECT_640x480,
@@ -341,6 +343,87 @@ static unsigned sdl_dc_dblsize=0;
 
 int __sdl_dc_is_60hz=0;
 
+// 16-bit
+#define FB_RGB0555 0
+// 16-bit
+#define FB_RGB565 1
+// 24-bit
+#define FB_RGB888 2
+// 32-bit
+#define FB_RGB0888 3
+
+#define POWERVR_FB_RENDER_MODULO (*(volatile uint32_t*)0xa05f804c)
+
+#define POWERVR_HPOS (*(volatile uint32_t*)0xa05f80ec) // STARTX
+#define POWERVR_VPOS (*(volatile uint32_t*)0xa05f80f0) // STARTY
+
+#define POWERVR_HPOS_IRQ (*(volatile uint32_t*)0xa05f80c8) // HBLANK_INT
+#define POWERVR_VPOS_IRQ (*(volatile uint32_t*)0xa05f80cc) // VBLANK_INT
+
+#define POWERVR_BORDER_COLOR (*(volatile uint32_t*)0xa05f8040)
+#define POWERVR_FB_DISPLAY_SIZE  (*(volatile uint32_t*)0xa05f805c)
+
+#define POWERVR_SYNC_WIDTH  (*(volatile uint32_t*)0xa05f80e0)
+
+#define POWERVR_SYNC_CFG (*(volatile uint32_t*)0xa05f80d0)
+
+#define POWERVR_HBORDER (*(volatile uint32_t*)0xa05f80d4) //HBLANK
+#define POWERVR_SYNC_LOAD (*(volatile uint32_t*)0xa05f80d8)
+#define POWERVR_VBORDER (*(volatile uint32_t*)0xa05f80dc) // VBLANK
+
+void MOD_STARTUP_960x960_VGA_CVT_RBv2(uint8_t fbuffer_color_mode)
+{
+  // 1360 wide scaled to 1280/1360 wide (field)
+  // 960 wide scaled to 960 wide (visible frame)
+  // Perfect for the DC because the DC does 32x32 tiles.
+  uint32_t horiz_active_area = 960;
+  uint32_t vert_active_area = 960;
+  // {RGB0555, RGB565} = 2Bpp, {RGB888} = 3Bpp, {RGB0888} = 4Bpp
+  uint32_t bpp_mode_size = fbuffer_color_mode + 1 + (0x1 ^ ((fbuffer_color_mode & 0x1) | (fbuffer_color_mode >> 1))); // Add another 1 only if 0b00
+
+  if(vid_check_cable() == CT_VGA)
+  {
+    *(volatile uint32_t*)0xa05f80e8 = 0x00160008;
+    *(volatile uint32_t*)0xa05f8044 = 0x00800000 | (fbuffer_color_mode << 2);
+
+    POWERVR_FB_RENDER_MODULO = (horiz_active_area * bpp_mode_size) / 8; // for PVR to know active area width
+    POWERVR_BORDER_COLOR = 0x00000000; // Border color in RGB0888 format (this mode has no border)
+    POWERVR_FB_DISPLAY_SIZE = (1 << 20) | ((vert_active_area - 1) << 10) | (((horiz_active_area * bpp_mode_size) / 4) - 1); // progressive scan has a 1 since no lines are skipped
+
+    POWERVR_HPOS = 0x0000003F; // ok: 63
+    POWERVR_HPOS_IRQ = 0x03FF0000; // ok: 1023
+    POWERVR_HBORDER = 0x003F03FF; // ok: 63, 1008 
+
+    POWERVR_SYNC_LOAD = 0x03e703FF; // 1024x704
+    POWERVR_SYNC_WIDTH = 0x029a530f; // ok: 7 (8,- 1), 421, 3 (DMT legacy), 15 (16,- 1)
+    
+    POWERVR_VPOS = 0x00270027; // ok: 14 & 14 ? new: 11 & 11.. CVT-RBv2: 14 & 14. Using 31 & 31.. 40 & 40, default: 0x00280028 (vert)
+    POWERVR_VPOS_IRQ = 0x002703e7; // ok: 14, 494 ? new: 11, 491.. CVT-RBv2: 14, 494. Using 21, 511.. Using 21, 512. 21, 520, default: 0x00150208 (vert)
+    POWERVR_VBORDER = 0x002703e7; // ok: 14, 494 ? new: 11, 491.. CVT-RBv2: 14, 494. Using 31, 511.. Using 40, 512. 40, 520, default: 0x00280208 (vert)
+    
+	POWERVR_SYNC_CFG = 0x00000100;
+
+    uint32_t scan_area_size = horiz_active_area * vert_active_area;
+    uint32_t scan_area_size_bytes = scan_area_size * bpp_mode_size; // This will always be divisible by 4
+
+    // Reset framebuffer address
+    *(volatile uint32_t*)0xa05f8050 = 0x00000000; // BootROM sets this to 0x00200000 (framebuffer base is 0xa5000000 + this)
+    *(volatile uint32_t*)0xa05f8054 = 0x00000000; // Same for progressive, resetting the offset gets us 2MB VRAM back after BootROM is done with it
+
+    // zero out framebuffer area
+    for(uint32_t pixel_or_two = 0; pixel_or_two < scan_area_size_bytes; pixel_or_two += 4)
+    {
+      *(uint32_t*)(0xa5000000 + pixel_or_two) = 0;
+    }
+
+    // re-enable video
+    *(volatile uint32_t*)0xa05f80e8 &= ~8;
+    *(volatile uint32_t*)0xa05f8044 |= 1;
+  }
+}
+
+int fbmode = FB_RGB565;
+
 SDL_Surface *DC_SetVideoMode(_THIS, SDL_Surface *current,
 				int width, int height, int bpp, Uint32 flags)
 {
@@ -379,6 +462,10 @@ SDL_Surface *DC_SetVideoMode(_THIS, SDL_Surface *current,
 		if (width==320 && height==240) disp_mode=DM_320x240_VGA;
 		else if (width==640 && height==480) disp_mode=DM_640x480_VGA;
 		// else if (width==800 && height==600) disp_mode=DM_800x608_VGA;
+		else if (width==960 && height==960)
+		{
+			disp_mode=DM_640x480_VGA;
+		}
 		else if (width==768 && height==480) disp_mode=DM_768x480_PAL_IL;
 		else if (width==768 && height==576) disp_mode=DM_768x576_PAL_IL;
 		else if (width==256 && height==256) disp_mode=DM_256x256_PAL_IL;
@@ -419,12 +506,15 @@ SDL_Surface *DC_SetVideoMode(_THIS, SDL_Surface *current,
 
 	switch(bpp) {
 	case 15: pixel_mode = PM_RGB555; pitch = width*2;
+	
+		fbmode = FB_RGB0555;
 		/* 5-5-5 */
 		Rmask = 0x00007c00;
 		Gmask = 0x000003e0;
 		Bmask = 0x0000001f;
 		break;
 	case 16: pixel_mode = PM_RGB565; pitch = width*2;
+		fbmode = FB_RGB565;
 		/* 5-6-5 */
 		Rmask = 0x0000f800;
 		Gmask = 0x000007e0;
@@ -432,6 +522,7 @@ SDL_Surface *DC_SetVideoMode(_THIS, SDL_Surface *current,
 		break;
 	case 24: bpp = 32;
 	case 32: pixel_mode = PM_RGB888; pitch = width*4;
+		fbmode = FB_RGB888;
 		Rmask = 0x00ff0000;
 		Gmask = 0x0000ff00;
 		Bmask = 0x000000ff;
@@ -474,6 +565,11 @@ SDL_Surface *DC_SetVideoMode(_THIS, SDL_Surface *current,
 		DC_VideoQuit(NULL);
 
 	vid_set_mode(disp_mode,pixel_mode);
+	if (width==960 && height==960)
+	{
+		MOD_STARTUP_960x960_VGA_CVT_RBv2(fbmode);
+	}
+	
 	current->pixels = vram_l; //vram_s;
 
 #ifndef SDL_VIDEO_OPENGL
